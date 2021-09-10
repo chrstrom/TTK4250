@@ -18,11 +18,7 @@ def condition_mean(x: ndarray, P: ndarray,
     Returns:
         cond_mean (ndarray): conditioned mean (state)
     """
-    #cond_mean = solution.task2.condition_mean(x, P, z, R, H)
-    HT = np.transpose(H)
-    cond_mean = x + P@HT@np.linalg.inv((H@P@HT + R))@(z - H@x)
-    return cond_mean
-
+    return x + P@H.T@np.linalg.inv((H@P@H.T + R))@(z - H@x)
 
 def condition_cov(P: ndarray, R: ndarray, H: ndarray) -> ndarray:
     """compute conditional covariance
@@ -35,11 +31,7 @@ def condition_cov(P: ndarray, R: ndarray, H: ndarray) -> ndarray:
     Returns:
         ndarray: the conditioned covariance
     """
-    HT = np.transpose(H)
-    conditional_cov = P - P@HT@np.linalg.inv(H@P@HT + R)@H@P
-
-    return conditional_cov
-
+    return P - P@H.T@np.linalg.inv(H@P@H.T + R)@H@P
 
 def get_task_2f(x_bar: ndarray, P: ndarray,
                 z_c: ndarray, R_c: ndarray, H_c: ndarray,
@@ -121,10 +113,9 @@ def get_task_2h(x_bar_rc: ndarray, P_rc: ndarray):
     # The area of this normal above the line is exactly Pr(above line)!
 
     n = np.array([-1, 1]).reshape((2, 1))
-    nT = np.transpose(n)
 
-    mean = nT@x_bar_rc
-    std = np.sqrt(nT@P_rc@n)
+    mean = n.T@x_bar_rc
+    std = np.sqrt(n.T@P_rc@n)
 
     prob_above_line = 1 - norm.cdf(5.0, mean, std)
 
