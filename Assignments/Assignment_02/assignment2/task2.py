@@ -1,5 +1,5 @@
+#/usr/bin/env python3
 import numpy as np
-import solution
 from numpy import ndarray
 from scipy.stats import norm
 
