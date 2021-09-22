@@ -150,18 +150,24 @@ def try_multiple_alphas(x_gt_data: Collection[ndarray],
 def main():
     usePregen = True  # choose between own generated data and pregenerated
     x_gt_data, z_data, Ts, N_data = load_data(usePregen)
-    plot_trajectory_with_measurements(x_gt_data, z_data)
+    #plot_trajectory_with_measurements(x_gt_data, z_data)
 
     # %% a: tune by hand and comment
+    # Large sigma_z -> x_hat smooth, but severely over/undershoots
+    # Small sigma_z -> x_hat very "spiky", jumping back and forth between gt
+        # sigma_z = 3.2 seemed to be a good middle ground
+    # Large sigma_a -> similar response as small sigma_z
+    # Small sigma_a -> similar response as large sigma_z
+        # sigma_a = 2.5 seemed to be a good middle ground
 
     # set parameters
-    sigma_a = 2.6
-    sigma_z = 3.1
+    sigma_a = 2.5
+    sigma_z = 3.2
 
     show_ekf_output(sigma_a, sigma_z, x_gt_data, z_data, Ts, N_data)
 
-    if input("Try multiple alpha combos? (y/n): ") == 'y':
-        try_multiple_alphas(x_gt_data, z_data, Ts, N_data)
+    #if input("Try multiple alpha combos? (y/n): ") == 'y':
+    #    try_multiple_alphas(x_gt_data, z_data, Ts, N_data)
 
     plt.tight_layout()
     plt.show()

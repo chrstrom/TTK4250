@@ -18,7 +18,7 @@ class MultiVarGaussian:
             if DEBUG:
                 if not self.mean.shape * 2 == self.cov.shape:
                     raise ValueError(f"mean has shape {self.mean.shape} "
-                                     "while cov has shape {self.cov.shape}")
+                                     f"while cov has shape {self.cov.shape}")
                 if not np.all(np.isfinite(self.mean)):
                     raise ValueError(f"Non finite mean = {self.mean}")
                 if not np.all(np.isfinite(self.cov)):

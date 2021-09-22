@@ -4,7 +4,6 @@ from dataclasses import dataclass
 import numpy as np
 from numpy import ndarray
 
-import solution
 # %% Measurement models interface declaration
 
 
@@ -39,24 +38,18 @@ class CartesianPosition2D(MeasurementModel):
     def h(self, x: ndarray) -> ndarray:
         """Calculate the noise free measurement location at x in sensor_state.
         """
-
-        # TODO replace this with your own code
-        x_h = solution.measurementmodels.CartesianPosition2D.h(self, x)
-
+        x_h = self.H(x)@x
         return x_h
 
     def H(self, x: ndarray) -> ndarray:
         """Calculate the measurement Jacobian matrix at x in sensor_state."""
-
-        # TODO replace this with your own code
-        H = solution.measurementmodels.CartesianPosition2D.H(self, x)
-
+        H = np.eye(2, 4)
         return H
 
     def R(self, x: ndarray) -> ndarray:
         """Calculate the measurement covariance matrix at x in sensor_state."""
 
         # TODO replace this with your own code
-        R = solution.measurementmodels.CartesianPosition2D.R(self, x)
+        R = np.eye(2)*self.sigma_z**2
 
         return R
