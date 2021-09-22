@@ -73,17 +73,18 @@ class WhitenoiseAcceleration2D(DynamicModel):
         See DynamicModel for variable documentation
         """
 
-        # TODO replace this with your own code
-        x_kp1 = solution.dynamicmodels.WhitenoiseAcceleration2D.f(self, x, Ts)
-
+        #x_kp1 = solution.dynamicmodels.WhitenoiseAcceleration2D.f(self, x, Ts)
+        x_kp1 = self.F(x, Ts) @ x
         return x_kp1
 
     def F(self, x: ndarray, Ts: float,) -> ndarray:
         """Calculate the transition function jacobian for Ts time units at x.
         See DynamicModel for variable documentation"""
-
-        # TODO replace this with your own code
-        F = solution.dynamicmodels.WhitenoiseAcceleration2D.F(self, x, Ts)
+        #F = solution.dynamicmodels.WhitenoiseAcceleration2D.F(self, x, Ts)
+        F = np.array([[1, 0, Ts,  0],
+                      [0, 1,  0, Ts],
+                      [0, 0,  1,  0],
+                      [0, 0,  0,  1]])
 
         return F
 
@@ -91,8 +92,11 @@ class WhitenoiseAcceleration2D(DynamicModel):
         """Calculate the Ts time units transition Covariance.
         See(4.64) in the book.
         See DynamicModel for variable documentation"""
+        T3 = Ts**3 / 3.0
+        T2 = Ts**2 / 2.0
 
-        # TODO replace this with your own code
-        Q = solution.dynamicmodels.WhitenoiseAcceleration2D.Q(self, x, Ts)
-
+        Q = np.array([[T3,  0, T2,  0],
+                      [ 0, T3,  0, T2],
+                      [T2,  0, Ts,  0],
+                      [ 0, T2,  0, Ts]]) * self.sigma_a**2
         return Q
