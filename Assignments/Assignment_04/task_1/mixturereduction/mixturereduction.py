@@ -19,20 +19,17 @@ def mixture_moments(weights: ndarray,
         mean: shape = (n,)
         cov: shape = (n, n)
     """
-    mean = None  # TODO
+    
+    N = means.shape[0]
+    n = means.shape[1]
 
-    # internal covariance
-    cov_internal = None  # TODO
+    mean = 0
+    for i in range(N):
+        mean += weights[i]*means[i]
 
-    # spread of means, aka. external covariance
-    # If you vectorize: take care to make the operation order be symetric
-    diffs = None  # TODO: optional intermediate
-    cov_external = None  # TODO: Hint loop, broadcast or np.einsum
-
-    # total covariance
-    cov = None  # TODO
-
-    # TODO replace this with your own code
-    mean, cov = solution.mixturereduction.mixture_moments(weights, means, covs)
+    cov = np.empty([n, n])
+    for i in range(N):
+        diff = means[i] - mean
+        cov += weights[i]*covs[i] + weights[i]*(diff@diff.T)
 
     return mean, cov
