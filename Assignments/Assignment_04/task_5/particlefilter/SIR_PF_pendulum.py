@@ -7,7 +7,7 @@ from numpy.core.numeric import zeros_like
 import scipy.stats
 
 # sets the seed for random numbers to be predictable
-DEBUG: Final[bool] = True  # TODO: set to false when working
+DEBUG: Final[bool] = False
 
 
 def bind_variables(func, **kwargs):
@@ -38,9 +38,8 @@ def get_dynamic_parameters():
 
 
 def get_measurement_parameters():
-    # TODO: change these in (b)
     Ld = 4
-    Ll = 0
+    Ll = 0.5
     r = 0.25
     return Ld, Ll, r
 
@@ -130,7 +129,6 @@ def plot_measurements(Z, fignum):
 
 # %% Task: Estimate using a particle filter
 
-
 def init_PF(rng):
     """initialize particles.
 
@@ -143,17 +141,18 @@ def init_PF(rng):
         weights (ndarray): normalized weights. shape = (N,)
     """
     # number of particles to use
-    N = 10  # TODO
+    N = 150
 
-    # TODO: initialize particles, pretend you do not know where the pendulum starts
-    px = np.array([None,  # Hint: use rng.somesampler
-                   None]).T
+    # Do not know where the pendulum starts, but know the physical
+    # limitations of the system!
+    px = np.array([rng.uniform(-np.pi, np.pi, size=N),  # Hint: use rng.somesampler
+                   rng.uniform(-np.pi, np.pi, size=N)]).T
 
     # initial weights
-    w = np.zeros(N)  # TODO
+    w = rng.uniform(size=N)
+    w /= sum(w)
 
-    # TODO replace this with your own code
-    N, px, w = solution.SIR_PF_pendulum.init_PF(rng)
+    #N, px, w = solution.SIR_PF_pendulum.init_PF(rng)
     assert np.isclose(sum(w), 1), "w must be normalized"
     assert len(px) == N and len(w) == N, "number of particles must be N"
 
@@ -174,14 +173,13 @@ def weight_update(zk: float, px: np.ndarray, w: np.ndarray, h: Callable, meas_no
         updated_weights: shape = (N,) must be normalized
     """
     w_upd = np.empty_like(w)
-    for n, pxn in enumerate(px):
-        # TODO, hint: h, zk, pxn and PF_measurement_distribution.pdf
-        w_upd[n] = 0
-    w_upd = w_upd  # TODO: normalize
 
-    # TODO replace this with your own code
-    w_upd = solution.SIR_PF_pendulum.weight_update(
-        zk, px, w, h, meas_noise_dist)
+    for n, pxn in enumerate(px):
+        w_upd[n] = meas_noise_dist.pdf(zk - h(pxn))
+    w_upd /= sum(w_upd)  
+
+    #w_upd = solution.SIR_PF_pendulum.weight_update(
+    #    zk, px, w, h, meas_noise_dist)
 
     return w_upd
 
@@ -200,16 +198,17 @@ def resample(px: np.ndarray, w: np.ndarray, rng: np.random.Generator) -> np.ndar
     """
     N = len(w)
     pxn = np.zeros_like(px)
-    # TODO: some pre calculations?
-    i = 0
-    for n in range(N):
-        # find a particle 'i' to pick
-        # algorithm in the book, but there are other options as well
-        i = i  # TODO
-        pxn[n] = px[i]
+    cumweights = np.cumsum(w)
 
-    # TODO replace this with your own code
-    pxn = solution.SIR_PF_pendulum.resample(px, w, rng)
+    i = 0
+    for j in range(N):
+        u_j = (j-1)/N + rng.uniform()/N
+        while u_j > cumweights[i]:
+            i += 1
+        pxn[j] = px[i]
+
+    pxn = np.random.permutation(pxn)
+    #pxn = solution.SIR_PF_pendulum.resample(px, w, rng)
 
     return pxn
 
@@ -228,12 +227,11 @@ def particle_prediction(px: np.ndarray, Ts: float, f: Callable, proc_noise_dist:
     """
     px_pred = zeros_like(px)
     for n, pxn in enumerate(px):
-        vkn = 0  # TODO: process noise realization, hint: proc_noise_dist.rvs
-        px_pred[n] = 0  # TODO: particle prediction, hint: f
+        vkn = proc_noise_dist.rvs()
+        px_pred[n] = f(pxn, vkn, Ts) 
 
-    # TODO replace this with your own code
-    px_pred = solution.SIR_PF_pendulum.particle_prediction(
-        px, Ts, f, proc_noise_dist)
+    #px_pred = solution.SIR_PF_pendulum.particle_prediction(
+    #    px, Ts, f, proc_noise_dist)
 
     return px_pred
 
@@ -302,10 +300,10 @@ def main():
     meas_sampler = bind_variables(measurement_noise_sampler, r=r, rng=rng)
 
     x = sample_trajectory(x0, Ts, K, proc_sampler, f)
-    fig1, axs1 = plot_trajectory(x)
+    #fig1, axs1 = plot_trajectory(x)
 
     Z = sample_measurements(x, h, meas_sampler)
-    fig2, ax2 = plot_measurements(Z, 2)
+    #fig2, ax2 = plot_measurements(Z, 2)
 
     # PF transition PDF: SIR proposal, or something you would like to test
     PF_dynamic_distribution = scipy.stats.uniform(loc=-S, scale=2 * S)
