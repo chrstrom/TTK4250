@@ -27,14 +27,10 @@ class GaussianMuxture:
     def get_mean(self) -> ndarray:
         """Return the mean of the gaussian mixture
 
-        Hint: use what you did in mixturereductin.py assignment 4
-
         Returns:
             mean (ndarray): the mean
         """
-
-        # TODO replace this with your own code
-        mean = solution.gaussmix.GaussianMuxture.get_mean(self)
+        mean = np.average(self.gaussians, axis=0, weights=self.weights)
 
         return mean
 
@@ -47,8 +43,12 @@ class GaussianMuxture:
             cov (ndarray): the covariance
         """
 
-        # TODO replace this with your own code
-        cov = solution.gaussmix.GaussianMuxture.get_cov(self)
+        cov_int = np.average(self.gaussians, axis=0, weights=self.weights)
+
+        mean_diff = self.gaussians - self.get_mean()
+        cov_ext = np.average(mean_diff**2, axis=0, weights=self.weights)
+
+        cov = cov_int + cov_ext
 
         return cov
 
@@ -59,9 +59,7 @@ class GaussianMuxture:
         Returns:
             reduction (MultiVarGaussian): the reduction
         """
-
-        # TODO replace this with your own code
-        reduction = solution.gaussmix.GaussianMuxture.reduce(self)
+        reduction = MultiVarGaussian(self.get_mean(), self.get_cov())
 
         return reduction
 
