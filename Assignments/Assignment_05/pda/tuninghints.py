@@ -21,8 +21,8 @@ def tuninghints(measurement_data: Sequence[ndarray],
     z_ymin = min([z[1] for zs in measurement_data for z in zs])
     z_ymax = max([z[1] for zs in measurement_data for z in zs])
 
-    clutter_density_estimate = "TODO"  # TODO
-    detection_probability_estimate = "TODO"  # TODO
+    clutter_density_estimate = total_number_of_clutter / (number_of_steps*(z_xmax - z_xmin)*(z_ymax - z_ymin))  # TODO
+    detection_probability_estimate = number_of_detections / number_of_steps
 
     print("Hints from tuninghints.py:")
     print(f"A reasonable clutter density is {clutter_density_estimate}")
