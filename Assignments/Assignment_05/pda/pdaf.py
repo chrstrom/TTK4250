@@ -27,7 +27,6 @@ class PDAF:
     def predict_state(self, state_upd_prev_gauss: MultiVarGaussian, Ts: float
                       ) -> MultiVarGaussian:
         """Prediction step
-        Hint: use self.ekf
 
         Args:
             state_upd_prev_gauss (MultiVarGaussian): previous update gaussian
@@ -36,17 +35,12 @@ class PDAF:
         Returns:
             state_pred_gauss (MultiVarGaussian): predicted state gaussian
         """
-
-        # TODO replace this with your own code
-        state_pred_gauus = solution.pdaf.PDAF.predict_state(
-            self, state_upd_prev_gauss, Ts)
-
-        return state_pred_gauus
+        state_pred_gauss = self.ekf.predict_state(state_upd_prev_gauss, Ts)
+        return state_pred_gauss
 
     def predict_measurement(self, state_pred_gauss: MultiVarGaussian
                             ) -> MultiVarGaussian:
         """Measurement prediction step
-        Hint: use self.ekf
 
         Args:
             state_pred_gauss (MultiVarGaussian): predicted state gaussian
@@ -54,11 +48,7 @@ class PDAF:
         Returns:
             z_pred_gauss (MultiVarGaussian): predicted measurement gaussian
         """
-
-        # TODO replace this with your own code
-        z_pred_gauss = solution.pdaf.PDAF.predict_measurement(
-            self, state_pred_gauss)
-
+        z_pred_gauss = self.ekf.predict_measurement(state_pred_gauss)
         return z_pred_gauss
 
     def gate(self,
@@ -67,8 +57,6 @@ class PDAF:
         """Gate the incoming measurements. That is remove the measurements 
         that have a mahalanobis distance higher than a certain threshold. 
 
-        Hint: use z_pred_gauss.mahalanobis_distance_sq and self.gate_size_sq
-
         Args:
             z_pred_gauss (MultiVarGaussian): predicted measurement gaussian 
             measurements (Sequence[ndarray]): sequence of measurements
@@ -76,10 +64,10 @@ class PDAF:
         Returns:
             gated_measurements (ndarray[:,2]): array of accepted measurements
         """
-
-        # TODO replace this with your own code
-        gated_measurements = solution.pdaf.PDAF.gate(
-            self, z_pred_gauss, measurements)
+        gated_measurements = [
+            m for m in measurements
+            if z_pred_gauss.mahalanobis_distance_sq(m) < self.gate_size_sq
+        ]
 
         return gated_measurements
 
@@ -103,9 +91,21 @@ class PDAF:
             associations_probs (ndarray[:]): the association probabilities
         """
 
-        # TODO replace this with your own code
-        associations_probs = solution.pdaf.PDAF.get_association_prob(
-            self, z_pred_gauss, gated_measurements)
+        m_k = len(gated_measurements)
+        P_D = self.detection_prob
+    
+        # Implementing Corollary 7.3.2
+        associations_probs = []
+        associations_probs.append(m_k * (1 - P_D) * self.clutter_density)   # a_k = 0
+        for i in range(m_k):
+            associations_probs.append(P_D*z_pred_gauss.pdf(gated_measurements[i]))    # a_k > 0
+        
+        associations_probs = np.array(associations_probs)
+        if associations_probs.sum() != 0:
+            associations_probs /= associations_probs.sum()
+        else:
+            associations_probs += 1/associations_probs.size
+
 
         return associations_probs
 
@@ -121,7 +121,6 @@ class PDAF:
         update_gaussians[2]: update given that gated_measurements[1] is correct
         ...
 
-
         Args:
             state_pred_gauss (MultiVarGaussian): predicted state gaussian
             z_pred_gauss (MultiVarGaussian): predicted measurement gaussian
@@ -130,10 +129,18 @@ class PDAF:
         Returns:
             Sequence[MultiVarGaussian]: The sequence of conditional updates
         """
+        x_pred, P_pred = state_pred_gauss
+        z_pred, S_pred = z_pred_gauss
+        H = self.ekf.sensor_model.jac(x_pred)
+        W = P_pred@H.T@np.linalg.inv(S_pred)
 
-        # TODO replace this with your own code
-        update_gaussians = solution.pdaf.PDAF.get_cond_update_gaussians(
-            self, state_pred_gauss, z_pred_gauss, gated_measurements)
+        # Implementing 7.20 and 7.21
+        update_gaussians = []
+        update_gaussians.append(MultiVarGaussian(x_pred, P_pred)) #a_k = 0
+        for z_k in gated_measurements:
+            mean = x_pred + W@(z_k - z_pred)
+            cov = (np.eye(4) - W@H)@P_pred
+            update_gaussians.append(MultiVarGaussian(mean, cov))
 
         return update_gaussians
 
@@ -151,10 +158,15 @@ class PDAF:
             state_upd_gauss (MultiVarGaussian): updated state gaussian
         """
 
-        # TODO replace this with your own code
+        gated_measurements = self.gate(z_pred_gauss, measurements)
+        beta = self.get_association_prob(z_pred_gauss, gated_measurements)
+        conditional_gaussians = self.get_cond_update_gaussians(state_pred_gauss, z_pred_gauss, gated_measurements)
+
+        # Not sure why this one isn't working
+        #state_upd_gauss = GaussianMuxture(beta, conditional_gaussians).reduce()
+
         state_upd_gauss = solution.pdaf.PDAF.update(
             self, state_pred_gauss, z_pred_gauss, measurements)
-
         return state_upd_gauss
 
     def step_with_info(self,
@@ -179,10 +191,9 @@ class PDAF:
             z_pred_gauss (MultiVarGaussian): predicted measurement gaussian
             state_upd_gauss (MultiVarGaussian): updated state gaussian
         """
-
-        # TODO replace this with your own code
-        state_pred_gauss, z_pred_gauss, state_upd_gauss = solution.pdaf.PDAF.step_with_info(
-            self, state_upd_prev_gauss, measurements, Ts)
+        state_pred_gauss = self.predict_state(state_upd_prev_gauss, Ts)
+        z_pred_gauss = self.predict_measurement(state_pred_gauss)
+        state_upd_gauss = self.update(state_pred_gauss, z_pred_gauss, measurements)
 
         return state_pred_gauss, z_pred_gauss, state_upd_gauss
 
