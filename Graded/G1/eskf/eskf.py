@@ -159,9 +159,14 @@ class ESKF():
         Returns:
             A (ndarray[15,15]): A
         """
-
-        # TODO replace this with your own code
-        A = solution.eskf.ESKF.get_error_A_continous(self, x_nom_prev, z_corr)
+        A = np.zeros((15, 15))
+        A[block_3x3(0, 1)] = np.eye(3)
+        A[block_3x3(1, 2)] = -x_nom_prev.ori.R @ get_cross_matrix(z_corr.acc - x_nom_prev.accm_bias)
+        A[block_3x3(1, 3)] = -x_nom_prev.ori.R
+        A[block_3x3(2, 2)] = -get_cross_matrix(z_corr.avel - x_nom_prev.accm_bias)
+        A[block_3x3(2, 4)] = -np.eye(3)
+        A[block_3x3(3, 3)] = -self.accm_bias_p*self.accm_correction
+        A[block_3x3(4, 4)] = -self.gyro_bias_p*self.gyro_correction
 
         return A
 
@@ -183,10 +188,15 @@ class ESKF():
         Returns:
             GQGT (ndarray[15, 15]): G @ Q @ G.T
         """
+        G = np.zeros((15, 12))
 
-        # TODO replace this with your own code
-        GQGT = solution.eskf.ESKF.get_error_GQGT_continous(self, x_nom_prev)
+        G[block_3x3(1, 0)] = -x_nom_prev.ori.R
+        G[block_3x3(2, 1)] = -np.eye(3)
+        G[block_3x3(3, 2)] = np.eye(3)
+        G[block_3x3(4, 3)] = np.eye(3)
 
+        GQGT = G@self.Q_err@G.T
+        
         return GQGT
 
     def get_van_loan_matrix(self, V: 'ndarray[30, 30]'):
