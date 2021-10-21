@@ -4,7 +4,9 @@ import scipy
 from dataclasses import dataclass, field
 from typing import Tuple
 from functools import cache
+from math import isnan
 
+from scipy.spatial.transform.rotation import Rotation
 from datatypes.multivargaussian import MultiVarGaussStamped
 from datatypes.measurements import (ImuMeasurement,
                                     CorrectedImuMeasurement,
@@ -96,19 +98,17 @@ class ESKF():
             x_nom_pred (NominalState): predicted nominal state
         """
 
-        # TODO replace this with your own code
-        #x_nom_pred = solution.eskf.ESKF.predict_nominal(
-        #    self, x_nom_prev, z_corr)
-
         # To avoid x_nom_prev.ts being None error
         if x_nom_prev.ts is None:
             x_nom_prev.ts = 0
 
         # Catch NaN's
-        if x_nom_prev.ori.real_part is np.nan or any(x_nom_prev.ori.vec_part) is np.nan:
+        if isnan(x_nom_prev.ori.real_part) or isnan(any(x_nom_prev.ori.vec_part)):
             x_nom_prev.ori = RotationQuaterion(1, np.zeros((3, 1)))
 
-        h = float(abs(x_nom_prev.ts - z_corr.ts))
+        Ts = float(abs(x_nom_prev.ts - z_corr.ts))
+        if Ts == 0:
+            return x_nom_prev
 
         # Previous state
         pos_prev = x_nom_prev.pos
@@ -117,39 +117,25 @@ class ESKF():
         accm_bias_prev = x_nom_prev.accm_bias
         gyro_bias_prev = x_nom_prev.gyro_bias
 
-        # Measurements
-        accm_meas = z_corr.acc
-        avel_meas = z_corr.avel
-
-        # State derivatives from (10.58)
+        # State derivatives from (10.58) without noise or bias
         pos_dot = vel_prev
-        vel_dot = x_nom_prev.ori.R@(accm_meas - accm_bias_prev) + self.g
+        vel_dot = x_nom_prev.ori.R@(z_corr.acc) + self.g
         accm_bias_dot = -self.accm_bias_p   * np.eye(3) @ accm_bias_prev
         gyro_bias_dot = -self.gyro_bias_std * np.eye(3) @ gyro_bias_prev
 
         # Euler step to get predictions from 
-        pos = pos_prev + h*pos_dot
-        vel = vel_prev + h*vel_dot
-        accm_bias = accm_bias_prev + h*accm_bias_dot
-        gyro_bias = gyro_bias_prev + h*gyro_bias_dot
+        pos = pos_prev + Ts*pos_dot
+        vel = vel_prev + Ts*vel_dot
+        accm_bias = accm_bias_prev + Ts*accm_bias_dot
+        gyro_bias = gyro_bias_prev + Ts*gyro_bias_dot
 
-        # Handle orientation on its own since quaternions are a bitch sometimes
-        # (at least in this implementation)
-        omega = np.array(avel_meas - gyro_bias_prev)
-        nu = ori_prev.real_part
-        eta = np.array(ori_prev.vec_part)
-        ori_dot_real = -0.5*omega@eta.T
-        ori_dot_vec = (nu*np.eye(3) + get_cross_matrix(eta))@omega.T
+        # Handle orientation on its own since quaternions are a bitch sometimes (at least in this implementation)
+        omega = np.array(z_corr.avel)
+        kappa = Ts*omega
+        kappa_2norm = np.sqrt(kappa@kappa.T)
+        ori = ori_prev @ RotationQuaterion(np.cos(0.5*kappa_2norm), np.sin(0.5*kappa_2norm)/kappa_2norm * kappa)
 
-        ori_pred_real = nu + h*ori_dot_real
-        ori_pred_vec = eta + h*ori_dot_vec
-
-        norm = np.sqrt(ori_pred_real**2 + sum(e*e for e in ori_pred_vec))
-
-        ori = RotationQuaterion(ori_pred_real/norm, ori_pred_vec/norm)
-
-
-        x_nom_pred = NominalState(pos, vel, ori, accm_bias, gyro_bias)
+        x_nom_pred = NominalState(pos, vel, ori, accm_bias, gyro_bias, z_corr.ts)
 
         return x_nom_pred
 
