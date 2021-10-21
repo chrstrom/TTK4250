@@ -2,9 +2,11 @@ import numpy as np
 from numpy import ndarray
 from dataclasses import dataclass
 from scipy.spatial.transform import Rotation
+
 from config import DEBUG
 
-from cross_matrix import get_cross_matrix
+import solution
+
 
 @dataclass
 class RotationQuaterion:
@@ -26,7 +28,7 @@ class RotationQuaterion:
         if DEBUG:
             assert len(self.vec_part) == 3
 
-        norm = self.real_part**2 + sum(self.vec_part**2)
+        norm = np.sqrt(self.real_part**2 + sum(self.vec_part**2))
         if not np.allclose(norm, 1):
             self.real_part /= norm
             self.vec_part /= norm
@@ -34,8 +36,6 @@ class RotationQuaterion:
         if self.real_part < 0:
             self.real_part *= -1
             self.vec_part *= -1
-
-        self.scalar_last_quat = np.append(self.vec_part, self.real_part)
 
     def multiply(self, other: 'RotationQuaterion') -> 'RotationQuaterion':
         """Multiply two rotation quaternions
@@ -49,16 +49,20 @@ class RotationQuaterion:
         Returns:
             quaternion_product (RotationQuaternion): the product
         """
-        real_part = self.real_part*other.real_part - self.vec_part@other.vec_part
-        vec_part =  self.vec_part*other.real_part + (self.real_part*np.eye(3) + get_cross_matrix(self.vec_part))@other.vec_part
-        quaternion_product = RotationQuaterion(real_part, vec_part)
+
+        # TODO replace this with your own code
+        quaternion_product = solution.quaternion.RotationQuaterion.multiply(
+            self, other)
 
         return quaternion_product
 
     def conjugate(self) -> 'RotationQuaterion':
         """Get the conjugate of the RotationQuaternion"""
-        conj = RotationQuaterion(self.real_part, -self.vec_part)
-        return conj 
+
+        # TODO replace this with your own code
+        conj = solution.quaternion.RotationQuaterion.conjugate(self)
+
+        return conj
 
     def as_rotmat(self) -> 'ndarray[3,3]':
         """Get the rotation matrix representation of self
@@ -66,7 +70,10 @@ class RotationQuaterion:
         Returns:
             R (ndarray[3,3]): rotation matrix
         """
-        R = Rotation.from_quat(self.scalar_last_quat).as_matrix()
+
+        # TODO replace this with your own code
+        R = solution.quaternion.RotationQuaterion.as_rotmat(self)
+
         return R
 
     @property
@@ -79,7 +86,10 @@ class RotationQuaterion:
         Returns:
             euler (ndarray[3]): extrinsic xyz euler angles (roll, pitch, yaw)
         """
-        euler = Rotation.from_quat(self.scalar_last_quat).as_euler('xyz', degrees=False)
+
+        # TODO replace this with your own code
+        euler = solution.quaternion.RotationQuaterion.as_euler(self)
+
         return euler
 
     def as_avec(self) -> 'ndarray[3]':
@@ -88,7 +98,10 @@ class RotationQuaterion:
         Returns:
             euler (ndarray[3]): extrinsic xyz euler angles (roll, pitch, yaw)
         """
-        avec = Rotation.from_quat(self.scalar_last_quat).as_rotvec()
+
+        # TODO replace this with your own code
+        avec = solution.quaternion.RotationQuaterion.as_avec(self)
+
         return avec
 
     @staticmethod
