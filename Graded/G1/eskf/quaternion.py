@@ -37,6 +37,8 @@ class RotationQuaterion:
             self.real_part *= -1
             self.vec_part *= -1
 
+        self.scalar_last_quat = np.append(self.vec_part, self.real_part)
+
     def multiply(self, other: 'RotationQuaterion') -> 'RotationQuaterion':
         """Multiply two rotation quaternions
         Hint: see (10.33)
@@ -49,20 +51,17 @@ class RotationQuaterion:
         Returns:
             quaternion_product (RotationQuaternion): the product
         """
-
-        # TODO replace this with your own code
-        quaternion_product = solution.quaternion.RotationQuaterion.multiply(
-            self, other)
+        real_part = self.real_part*other.real_part - self.vec_part@other.vec_part
+        vec_part =  self.vec_part*other.real_part + (self.real_part*np.eye(3) + get_cross_matrix(self.vec_part))@other.vec_part
+        quaternion_product = RotationQuaterion(real_part, vec_part)
 
         return quaternion_product
 
+
     def conjugate(self) -> 'RotationQuaterion':
         """Get the conjugate of the RotationQuaternion"""
-
-        # TODO replace this with your own code
-        conj = solution.quaternion.RotationQuaterion.conjugate(self)
-
-        return conj
+        conj = RotationQuaterion(self.real_part, -self.vec_part)
+        return conj 
 
     def as_rotmat(self) -> 'ndarray[3,3]':
         """Get the rotation matrix representation of self
@@ -70,10 +69,7 @@ class RotationQuaterion:
         Returns:
             R (ndarray[3,3]): rotation matrix
         """
-
-        # TODO replace this with your own code
-        R = solution.quaternion.RotationQuaterion.as_rotmat(self)
-
+        R = Rotation.from_quat(self.scalar_last_quat).as_matrix()
         return R
 
     @property
@@ -86,10 +82,7 @@ class RotationQuaterion:
         Returns:
             euler (ndarray[3]): extrinsic xyz euler angles (roll, pitch, yaw)
         """
-
-        # TODO replace this with your own code
-        euler = solution.quaternion.RotationQuaterion.as_euler(self)
-
+        euler = Rotation.from_quat(self.scalar_last_quat).as_euler('xyz', degrees=False)
         return euler
 
     def as_avec(self) -> 'ndarray[3]':
@@ -98,10 +91,7 @@ class RotationQuaterion:
         Returns:
             euler (ndarray[3]): extrinsic xyz euler angles (roll, pitch, yaw)
         """
-
-        # TODO replace this with your own code
-        avec = solution.quaternion.RotationQuaterion.as_avec(self)
-
+        avec = Rotation.from_quat(self.scalar_last_quat).as_rotvec()
         return avec
 
     @staticmethod
