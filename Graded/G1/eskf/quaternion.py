@@ -5,7 +5,7 @@ from scipy.spatial.transform import Rotation
 
 from config import DEBUG
 
-import solution
+from cross_matrix import get_cross_matrix
 
 
 @dataclass
