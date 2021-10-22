@@ -196,7 +196,7 @@ class ESKF():
         G[block_3x3(4, 3)] = np.eye(3)
 
         GQGT = G@self.Q_err@G.T
-        
+
         return GQGT
 
     def get_van_loan_matrix(self, V: 'ndarray[30, 30]'):
@@ -239,10 +239,23 @@ class ESKF():
             Ad (ndarray[15, 15]): discrede transition matrix
             GQGTd (ndarray[15, 15]): discrete noise covariance matrix
         """
+        Ts = abs(x_nom_prev.ts - z_corr.ts)
 
-        # TODO replace this with your own code
-        Ad, GQGTd = solution.eskf.ESKF.get_discrete_error_diff(
-            self, x_nom_prev, z_corr)
+        A = self.get_error_A_continous(x_nom_prev, z_corr)
+        GQGT = self.get_error_GQGT_continous(x_nom_prev)
+
+        V = np.block([[-A, GQGT],
+                      [np.zeros((15, 15)), A.T]])
+
+        VL = self.get_van_loan_matrix(V*Ts)
+
+        V2 = VL[:15, 15:]
+        V1 = VL[15:, 15:]
+
+        Ad = V1.T
+        GQGTd = V1.T@V2
+        #Ad, GQGTd = solution.eskf.ESKF.get_discrete_error_diff(
+        #    self, x_nom_prev, z_corr)
 
         return Ad, GQGTd
 
@@ -265,9 +278,12 @@ class ESKF():
             x_err_pred (ErrorStateGauss): predicted error state
         """
 
-        # TODO replace this with your own code
-        x_err_pred = solution.eskf.ESKF.predict_x_err(
-            self, x_nom_prev, x_err_prev_gauss, z_corr)
+        Ad, GQGTd = self.get_discrete_error_diff(x_nom_prev, z_corr)
+
+        P_prev = x_err_prev_gauss.cov
+        Q = Ad@P_prev@Ad.T + GQGTd
+
+        x_err_pred = ErrorStateGauss(x_err_prev_gauss.mean, Q, x_nom_prev.ts)
 
         return x_err_pred
 
@@ -287,10 +303,10 @@ class ESKF():
             x_nom_pred (NominalState): predicted nominal state
             x_err_pred (ErrorStateGauss): predicted error state
         """
-
-        # TODO replace this with your own code
-        x_nom_pred, x_err_pred = solution.eskf.ESKF.predict_from_imu(
-            self, x_nom_prev, x_err_gauss, z_imu)
+        z_corr = self.correct_z_imu(x_nom_prev, z_imu)
+        
+        x_nom_pred = self.predict_nominal(x_nom_prev, z_corr)
+        x_err_pred = self.predict_x_err(x_nom_prev, x_err_gauss, z_corr)
 
         return x_nom_pred, x_err_pred
 
