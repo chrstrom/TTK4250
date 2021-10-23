@@ -403,7 +403,6 @@ class ESKF():
         I_WH = np.eye(*P.shape) - W @ H
 
         P_upd = (I_WH @ P @ I_WH.T + W @ R @ W.T)
-        
         mean = W@(z_gnss.pos - z_gnss_pred_gauss.mean)
 
         x_err_upd_gauss = ErrorStateGauss(mean, P_upd, z_gnss.ts)
@@ -433,7 +432,8 @@ class ESKF():
             x_nom_prev.vel + x_err_upd.vel,
             x_nom_prev.ori.multiply(RotationQuaterion(1, 0.5*x_err_upd.avec)), 
             x_nom_prev.accm_bias + x_err_upd.accm_bias,
-            x_nom_prev.gyro_bias + x_err_upd.gyro_bias      
+            x_nom_prev.gyro_bias + x_err_upd.gyro_bias,
+            x_nom_prev.ts      
         )
 
         mean = np.zeros(15)
