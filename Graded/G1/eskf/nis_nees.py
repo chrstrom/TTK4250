@@ -24,10 +24,17 @@ def get_NIS(z_gnss: GnssMeasurement,
     Returns:
         NIS (float): NIS value
     """
+    z_pos_marg = z_gnss.pos
+    z_pred_gauss_marg = z_gnss_pred_gauss
 
-    # TODO replace this with your own code
-    NIS = solution.nis_nees.get_NIS(z_gnss, z_gnss_pred_gauss, marginal_idxs)
+    if marginal_idxs is not None:
+        z_pos_marg = z_pos_marg[marginal_idxs]
+        z_pred_gauss_marg = z_pred_gauss_marg.marginalize(marginal_idxs)
 
+    nu = z_pos_marg - z_pred_gauss_marg.mean 
+    S = z_pred_gauss_marg.cov
+
+    NIS = nu.T@np.linalg.inv(S)@nu
     return NIS
 
 
@@ -63,9 +70,15 @@ def get_NEES(error: 'ndarray[15]',
     Returns:
         NEES (float): NEES value
     """
+    e = error
+    x_err_gauss = x_err
+    if marginal_idxs is not None:
+        e = e[marginal_idxs]
+        x_err_gauss = x_err_gauss.marginalize(marginal_idxs)
 
-    # TODO replace this with your own code
-    NEES = solution.nis_nees.get_NEES(error, x_err, marginal_idxs)
+    P = x_err_gauss.cov
+
+    NEES = e.T@np.linalg.inv(P)@e
 
     return NEES
 
