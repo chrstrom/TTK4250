@@ -6,9 +6,6 @@ from datatypes.measurements import GnssMeasurement
 from datatypes.eskf_states import NominalState, ErrorStateGauss
 from datatypes.multivargaussian import MultiVarGaussStamped
 
-import solution
-
-
 def get_NIS(z_gnss: GnssMeasurement,
             z_gnss_pred_gauss: MultiVarGaussStamped,
             marginal_idxs: Optional[Sequence[int]] = None
@@ -48,9 +45,16 @@ def get_error(x_true: NominalState,
     Returns:
         error (ndarray[15]): difference between x_true and x_nom. 
     """
-
-    # TODO replace this with your own code
-    error = solution.nis_nees.get_error(x_true, x_nom)
+    q_inv = x_nom.ori.conjugate()
+    error_ori = q_inv @ x_true.ori 
+    
+    error = np.concatenate([
+        x_true.pos - x_nom.pos,
+        x_true.vel - x_nom.vel,
+        error_ori.as_euler(),
+        x_true.accm_bias - x_nom.accm_bias,
+        x_true.gyro_bias - x_nom.gyro_bias
+    ])
 
     return error
 
@@ -72,6 +76,7 @@ def get_NEES(error: 'ndarray[15]',
     """
     e = error
     x_err_gauss = x_err
+    
     if marginal_idxs is not None:
         e = e[marginal_idxs]
         x_err_gauss = x_err_gauss.marginalize(marginal_idxs)
