@@ -97,8 +97,9 @@ def main():
     M = len(landmarks)
 
     # %% Initilize
-    Q = np.diag([0.1, 0.1, 1 * np.pi / 180]) ** 2  # TODO tune
-    R = np.diag([0.1, 1 * np.pi / 180]) ** 2  # TODO tune
+    # TODO: Tune
+    Q = np.diag([0.1, 0.1, 1 * np.pi / 180]) ** 2  # first element is variance of x, second is variance of y, third is variance of heading
+    R = np.diag([0.1, 1 * np.pi / 180]) ** 2  # first element is variance of radius, second is variance of theta (range, azi)
 
     # first is for joint compatibility, second is individual
     JCBBalphas = np.array([0.001, 0.0001])  # TODO tune
@@ -149,10 +150,10 @@ def main():
         # Transpose is to stack measurements rowwise
         # z_k = z[k][0].T
 
-        eta_hat[k], P_hat[k], NIS[k], a[k] =  # TODO update
+        eta_hat[k], P_hat[k], NIS[k], a[k] = slam.update(eta_pred[k], P_pred[k], z_k)
 
         if k < K - 1:
-            eta_pred[k + 1], P_pred[k + 1] =  # TODO predict
+            eta_pred[k + 1], P_pred[k + 1] = slam.predict(eta_hat[k], P_hat[k], odometry[k])
 
         assert (
             eta_hat[k].shape[0] == P_hat[k].shape[0]
@@ -169,7 +170,7 @@ def main():
             NISnorm[k] = 1
             CInorm[k].fill(1)
 
-        NEESes[k] =  # TODO, use provided function slam.NEESes
+        NEESes[k] = slam.NEESes(eta_hat[k][0:3], P_hat[k][0:3, 0:3], poseGT[k]) 
 
         if doAssoPlot and k > 0:
             axAsso.clear()
