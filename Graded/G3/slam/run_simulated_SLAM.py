@@ -97,12 +97,11 @@ def main():
     M = len(landmarks)
 
     # %% Initilize
-    # TODO: Tune
-    Q = np.diag([0.1, 0.1, 1 * np.pi / 180]) ** 2  # first element is variance of x, second is variance of y, third is variance of heading
-    R = np.diag([0.1, 1 * np.pi / 180]) ** 2  # first element is variance of radius, second is variance of theta (range, azi)
+    Q = np.diag([0.018, 0.018, 0.45 * np.pi / 180]) ** 2   # first element is variance of x, second is variance of y, third is variance of heading
+    R = np.diag([0.1, 0.9 * np.pi / 180]) ** 2    # first element is variance of radius, second is variance of theta (range, azi)
 
     # first is for joint compatibility, second is individual
-    JCBBalphas = np.array([0.001, 0.0001])  # TODO tune
+    JCBBalphas = np.array([1e-5, 1e-5]) 
 
     doAsso = True
 
@@ -126,6 +125,7 @@ def main():
 
     # For consistency testing
     alpha = 0.05
+    confidence_prob = 1 - alpha
 
     # init
     eta_pred[0] = poseGT[0]  # we start at the correct position for reference
@@ -136,7 +136,7 @@ def main():
     # plotting
 
     doAssoPlot = False
-    playMovie = True
+    playMovie = False
     if doAssoPlot:
         figAsso, axAsso = plt.subplots(num=1, clear=True)
 
@@ -161,7 +161,7 @@ def main():
 
         num_asso = np.count_nonzero(a[k] > -1)
 
-        CI[k] = chi2.interval(alpha, 2 * num_asso)
+        CI[k] = chi2.interval(confidence_prob, 2 * num_asso)
 
         if num_asso > 0:
             NISnorm[k] = NIS[k] / (2 * num_asso)
@@ -246,14 +246,14 @@ def main():
     dfs = [3, 2, 1]
 
     for ax, tag, NEES, df in zip(ax4, tags, NEESes.T, dfs):
-        CI_NEES = chi2.interval(alpha, df)
+        CI_NEES = chi2.interval(confidence_prob, df)
         ax.plot(np.full(N, CI_NEES[0]), '--')
         ax.plot(np.full(N, CI_NEES[1]), '--')
         ax.plot(NEES[:N], lw=0.5)
         insideCI = (CI_NEES[0] <= NEES) * (NEES <= CI_NEES[1])
         ax.set_title(f'NEES {tag}: {insideCI.mean()*100}% inside CI')
 
-        CI_ANEES = np.array(chi2.interval(alpha, df*N)) / N
+        CI_ANEES = np.array(chi2.interval(confidence_prob, df*N)) / N
         print(f"CI ANEES {tag}: {CI_ANEES}")
         print(f"ANEES {tag}: {NEES.mean()}")
 
