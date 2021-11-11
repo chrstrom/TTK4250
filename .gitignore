@@ -7,7 +7,7 @@ __pycache__/
 *.so
 
 # Distribution / packaging
-.pickle
+*.pickle
 .Python
 build/
 develop-eggs/
