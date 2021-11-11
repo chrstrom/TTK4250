@@ -33,12 +33,13 @@ class EKFSLAM:
         np.ndarray, shape = (3,)
             the predicted state
         """
-        # TODO replace this with your own code
-        xpred = solution.EKFSLAM.EKFSLAM.f(self, x, u)
-        return xpred
+        psikm1 = x[2]
 
-        # TODO, eq (11.7). Should wrap heading angle between (-pi, pi), see utils.wrapToPi
-        xpred = None
+        xk = x[0] + u[0]*np.cos(psikm1) - u[1]*np.sin(psikm1)
+        yk = x[1] + u[0]*np.sin(psikm1) + u[1]*np.cos(psikm1)
+        psik = psikm1 + u[2]
+
+        xpred = [xk, yk, psik]
 
         return xpred
 
@@ -57,12 +58,13 @@ class EKFSLAM:
         np.ndarray
             The Jacobian of f wrt. x.
         """
-        # TODO replace this with your own code
-        Fx = solution.EKFSLAM.EKFSLAM.Fx(self, x, u)
-        return Fx
+        #Fx = solution.EKFSLAM.EKFSLAM.Fx(self, x, u)
+        #return Fx
 
-        Fx = None  # TODO, eq (11.13)
-
+        psi = x[2]
+        Fx = np.array([[1, 0, -u[0]*np.sin(psi) - u[1]*np.cos(psi)],
+                       [0, 1,  u[0]*np.cos(psi) - u[1]*np.sin(psi)],
+                       [0, 0, 1]])  
         return Fx
 
     def Fu(self, x: np.ndarray, u: np.ndarray) -> np.ndarray:
@@ -80,12 +82,13 @@ class EKFSLAM:
         np.ndarray
             The Jacobian of f wrt. u.
         """
-        # TODO replace this with your own code
-        Fu = solution.EKFSLAM.EKFSLAM.Fu(self, x, u)
-        return Fu
+        #Fu = solution.EKFSLAM.EKFSLAM.Fu(self, x, u)
+        #return Fu
 
-        Fu = None  # TODO, eq (11.14)
-
+        psi = x[2]
+        Fu = np.array([[np.cos(psi), -np.sin(psi), 0],
+                       [np.sin(psi),  np.cos(psi), 0],
+                       [0, 0, 1]])  
         return Fu
 
     def predict(
