@@ -39,7 +39,7 @@ class EKFSLAM:
         yk = x[1] + u[0]*np.sin(psikm1) + u[1]*np.cos(psikm1)
         psik = psikm1 + u[2]
 
-        xpred = [xk, yk, psik]
+        xpred = np.array([xk, yk, psik])
 
         return xpred
 
@@ -110,8 +110,8 @@ class EKFSLAM:
         Tuple[np.ndarray, np.ndarray], shapes= (3 + 2*#landmarks,), (3 + 2*#landmarks,)*2
             predicted mean and covariance of eta.
         """
-        etapred, P = solution.EKFSLAM.EKFSLAM.predict(self, eta, P, z_odo)
-        return etapred, P
+        #etapred, P = solution.EKFSLAM.EKFSLAM.predict(self, eta, P, z_odo)
+        #return etapred, P
 
         # check inout matrix
         assert np.allclose(P, P.T), "EKFSLAM.predict: not symmetric P input"
@@ -124,20 +124,20 @@ class EKFSLAM:
         etapred = np.empty_like(eta)
 
         x = eta[:3]
-        etapred[:3] = None  # TODO robot state prediction
-        etapred[3:] = None  # TODO landmarks: no effect
+        etapred[:3] = self.f(x, z_odo)
+        etapred[3:] = eta[3:]
 
-        Fx = None  # TODO
-        Fu = None  # TODO
+        Fx = self.Fx(x, z_odo)
+        Fu = self.Fu(x, z_odo)
 
         # evaluate covariance prediction in place to save computation
         # only robot state changes, so only rows and colums of robot state needs changing
         # cov matrix layout:
         # [[P_xx, P_xm],
         # [P_mx, P_mm]]
-        P[:3, :3] = None  # TODO robot cov prediction
-        P[:3, 3:] = None  # TODO robot-map covariance prediction
-        P[3:, :3] = None  # TODO map-robot covariance: transpose of the above
+        P[:3, :3] = Fx@P[:3, :3]@Fx.T + Fu@self.Q@Fu.T
+        P[:3, 3:] = Fx@P[:3, 3:]
+        P[3:, :3] = P[:3, 3:].T
 
         assert np.allclose(P, P.T), "EKFSLAM.predict: not symmetric P"
         assert np.all(
@@ -163,9 +163,8 @@ class EKFSLAM:
             The landmarks in the sensor frame.
         """
 
-        # TODO replace this with your own code
-        zpred = solution.EKFSLAM.EKFSLAM.h(self, eta)
-        return zpred
+        #zpred = solution.EKFSLAM.EKFSLAM.h(self, eta)
+        #return zpred
 
         # extract states and map
         x = eta[0:3]
@@ -173,20 +172,16 @@ class EKFSLAM:
         m = eta[3:].reshape((-1, 2)).T
 
         Rot = rotmat2d(-x[2])
+        
+        # relative position of landmark to sensor on robot in world frame
+        delta_m = (m.T - eta[0:2]).T
 
-        # None as index ads an axis with size 1 at that position.
-        # Numpy broadcasts size 1 dimensions to any size when needed
-        delta_m = None  # TODO, relative position of landmark to sensor on robot in world frame
+        # predicted measurements in cartesian coordinates, beware sensor offset for VP
+        zpredcart = Rot @ delta_m - self.sensor_offset[:, None] # None as index ads an axis with size 1 at that position.
 
-        # TODO, predicted measurements in cartesian coordinates, beware sensor offset for VP
-        zpredcart = None
-
-        zpred_r = None  # TODO, ranges
-        zpred_theta = None  # TODO, bearings
-        zpred = None  # TODO, the two arrays above stacked on top of each other vertically like
-        # [ranges;
-        #  bearings]
-        # into shape (2, #lmrk)
+        zpred_r = la.norm(zpredcart, 2, axis=0) # ranges
+        zpred_theta = np.arctan2(zpredcart[1,:], zpredcart[0,:])  # bearings
+        zpred = np.vstack((zpred_r, zpred_theta))  #  the two arrays above stacked on top of each other vertically like
 
         # stack measurements along one dimension, [range1 bearing1 range2 bearing2 ...]
         zpred = zpred.T.ravel()
