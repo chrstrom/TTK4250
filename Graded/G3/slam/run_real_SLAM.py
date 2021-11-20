@@ -110,13 +110,15 @@ def main():
 
     car = Car(L, H, a, b)
 
-    sigmas = 0.025 * np.array([0.0001, 0.00005, 6 * np.pi / 180])  # TODO tune
+
+    sigmas = 0.02 * np.array([0.001, 0.0005, 6 * np.pi / 180])  # TODO tune
     CorrCoeff = np.array([[1, 0, 0], [0, 1, 0.9], [0, 0.9, 1]])
     Q = np.diag(sigmas) @ CorrCoeff @ np.diag(sigmas)
-    R = np.diag([0.1, 1 * np.pi / 180]) ** 2  # TODO tune
+    R = np.diag([0.1, 0.5 * np.pi / 180]) ** 2  # TODO tune
 
     # first is for joint compatibility, second is individual
-    JCBBalphas = np.array([0.00001, 1e-6])  # TODO tune
+    JCBBalphas = np.array([1e-5, 1e-6])  # TODO tune
+
 
     sensorOffset = np.array([car.a + car.L, car.b])
     doAsso = True
@@ -145,7 +147,7 @@ def main():
     t = timeOdo[0]
 
     # %%  run
-    N = 1000  # K
+    N = 20000  # K
 
     doPlot = False
 
@@ -163,10 +165,10 @@ def main():
         odos = np.zeros((K, 3))
         odox = np.zeros((K, 3))
         odox[0] = eta
-
+        P_odo = P.copy()
         for k in range(min(N, K - 1)):
             odos[k + 1] = odometry(speed[k + 1], steering[k + 1], 0.025, car)
-            odox[k + 1], _ = slam.predict(odox[k], P, odos[k + 1])
+            odox[k + 1], _ = slam.predict(odox[k], P_odo, odos[k + 1])
 
     for k in tqdm(range(N)):
         if mk < mK - 1 and timeLsr[mk] <= timeOdo[k + 1]:
@@ -255,9 +257,10 @@ def main():
             marker=".",
             label="GPS",
         )
-        ax5.plot(*odox[:N, :2].T, label="odom")
+        #ax5.plot(*odox[:N, :2].T, label="odom")
+        ax5.plot(*xupd[mk_first:mk, :2].T, label="x_SLAM")
         ax5.grid()
-        ax5.set_title("GPS vs odometry integration")
+        ax5.set_title("GPS vs SLAM pose estimate")
         ax5.legend()
 
     # %%

@@ -97,7 +97,7 @@ def main():
     M = len(landmarks)
 
     # %% Initilize
-    Q = np.diag([0.018, 0.018, 0.45 * np.pi / 180]) ** 2   # first element is variance of x, second is variance of y, third is variance of heading
+    Q = np.diag([0.018, 0.018, 0.45 * np.pi / 180]) ** 2    # first element is variance of x, second is variance of y, third is variance of heading
     R = np.diag([0.1, 0.9 * np.pi / 180]) ** 2    # first element is variance of radius, second is variance of theta (range, azi)
 
     # first is for joint compatibility, second is individual
